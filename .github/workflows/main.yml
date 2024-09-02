@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  # Задача для запуска тестов
+  # Задача для запуска тестов бэкенда
   tests:
     runs-on: ubuntu-latest
     services:
@@ -44,9 +44,9 @@ jobs:
           cd backend/
           python manage.py test
 
-  # Задача для сборки и отправки образа на Docker Hub
+  # Задача для сборки и отправки образа бэкенда на Docker Hub
   build_and_push_to_docker_hub:
-    name: Push Docker image to DockerHub
+    name: Push Backend Docker image to DockerHub
     runs-on: ubuntu-latest
     needs: tests
     steps:
@@ -57,12 +57,53 @@ jobs:
       - name: Login to Docker 
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }} # Храните логин в secrets
-          password: ${{ secrets.DOCKER_PASSWORD }} # Храните пароль в secrets
-      - name: Push to DockerHub
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push Backend to DockerHub
         uses: docker/build-push-action@v4
         with:
           context: ./backend/
           push: true
-          # Исправлено имя пользователя
           tags: ${{ secrets.DOCKER_USERNAME }}/taski_backend:latest
+
+  # Задача для запуска тестов фронтенда
+  frontend_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend/
+          npm ci
+
+      - name: Test frontend
+        run: |
+          cd frontend/
+          npm run test
+
+  # Задача для сборки и отправки образа фронтенда на Docker Hub
+  build_frontend_and_push_to_docker_hub:
+    name: Push Frontend Docker image to DockerHub
+    runs-on: ubuntu-latest
+    needs: frontend_tests
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker 
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Push Frontend to DockerHub
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend/
+          push: true
+          tags: athletev/taski_frontend:latest
